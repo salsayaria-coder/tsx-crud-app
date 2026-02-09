@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import React, { useMemo, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import type { User } from "../types/User";
 
@@ -8,6 +8,34 @@ type Props = {
 };
 
 type Errors = { name?: string; email?: string };
+type FilterBy = "name" | "email";
+
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function highlightMatch(text: string, query: string) {
+  const q = query.trim();
+  if (!q) return text;
+
+  const safe = escapeRegExp(q);
+  const regex = new RegExp(`(${safe})`, "ig");
+  const parts = text.split(regex);
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={i} style={{ padding: "0 2px" }}>
+            {part}
+          </mark>
+        ) : (
+          <React.Fragment key={i}>{part}</React.Fragment>
+        )
+      )}
+    </>
+  );
+}
 
 export default function UsersPage({ users, setUsers }: Props) {
   const [form, setForm] = useState<Omit<User, "id">>({
@@ -19,24 +47,19 @@ export default function UsersPage({ users, setUsers }: Props) {
   });
   const [errors, setErrors] = useState<Errors>({});
 
-  // ✅ FILTER STATE (NEW)
+  // ✅ NEW: filter text + filter column
   const [filter, setFilter] = useState("");
+  const [filterBy, setFilterBy] = useState<FilterBy>("name");
 
-  // ✅ FILTERED USERS (NEW)
   const filteredUsers = useMemo(() => {
     const q = filter.trim().toLowerCase();
     if (!q) return users;
 
     return users.filter((u) => {
-      return (
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        (u.phone ?? "").toLowerCase().includes(q) ||
-        (u.status ?? "").toLowerCase().includes(q) ||
-        (u.role ?? "").toLowerCase().includes(q)
-      );
+      if (filterBy === "name") return u.name.toLowerCase().includes(q);
+      return u.email.toLowerCase().includes(q);
     });
-  }, [users, filter]);
+  }, [users, filter, filterBy]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -133,14 +156,25 @@ export default function UsersPage({ users, setUsers }: Props) {
           </button>
         </div>
 
-        {/* ✅ FILTER INPUT (NEW) */}
-        <input
-          type="text"
-          placeholder="Search users (name, email, phone, status, role)..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          style={{ width: "100%", padding: 10, marginBottom: 12 }}
-        />
+        {/* ✅ NEW: column selector + search box */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
+          <select
+            value={filterBy}
+            onChange={(e) => setFilterBy(e.target.value as FilterBy)}
+            style={{ padding: 10 }}
+          >
+            <option value="name">Name</option>
+            <option value="email">Email</option>
+          </select>
+
+          <input
+            type="text"
+            placeholder={`Search by ${filterBy}...`}
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            style={{ flex: 1, padding: 10 }}
+          />
+        </div>
 
         <table width="100%" border={1} cellPadding={6} style={{ textAlign: "center" }}>
           <thead>
@@ -155,12 +189,18 @@ export default function UsersPage({ users, setUsers }: Props) {
             </tr>
           </thead>
           <tbody>
-            {/* ✅ Use filteredUsers instead of users */}
             {filteredUsers.map((u) => (
               <tr key={u.id}>
                 <td>{u.id}</td>
-                <td>{u.name}</td>
-                <td>{u.email}</td>
+
+                {/* ✅ NEW: highlight only the column being filtered */}
+                <td>
+                  {filterBy === "name" ? highlightMatch(u.name, filter) : u.name}
+                </td>
+                <td>
+                  {filterBy === "email" ? highlightMatch(u.email, filter) : u.email}
+                </td>
+
                 <td>{u.phone}</td>
                 <td>{u.status}</td>
                 <td>{u.role}</td>
@@ -171,7 +211,6 @@ export default function UsersPage({ users, setUsers }: Props) {
               </tr>
             ))}
 
-            {/* ✅ Show correct empty message depending on filter */}
             {users.length === 0 && (
               <tr>
                 <td colSpan={7} style={{ padding: 16 }}>
