@@ -94,6 +94,7 @@ export default function UsersPage({ users, setUsers }: Props) {
 
   // Reset to page 1 when filter/sort/pageSize changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [filter, filterBy, sortBy, sortDir, pageSize]);
 
