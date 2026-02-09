@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import type { User } from "../types/User";
 
@@ -18,6 +18,25 @@ export default function UsersPage({ users, setUsers }: Props) {
     role: "",
   });
   const [errors, setErrors] = useState<Errors>({});
+
+  // ✅ FILTER STATE (NEW)
+  const [filter, setFilter] = useState("");
+
+  // ✅ FILTERED USERS (NEW)
+  const filteredUsers = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return users;
+
+    return users.filter((u) => {
+      return (
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        (u.phone ?? "").toLowerCase().includes(q) ||
+        (u.status ?? "").toLowerCase().includes(q) ||
+        (u.role ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [users, filter]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -87,12 +106,41 @@ export default function UsersPage({ users, setUsers }: Props) {
             {errors.email && <div style={{ color: "red", fontSize: 12 }}>{errors.email}</div>}
           </div>
 
-          <input name="phone" placeholder="Phone" value={form.phone} onChange={handleChange} style={{ width: "100%", padding: 8 }} />
-          <input name="status" placeholder="Status" value={form.status} onChange={handleChange} style={{ width: "100%", padding: 8 }} />
-          <input name="role" placeholder="Role" value={form.role} onChange={handleChange} style={{ width: "100%", padding: 8 }} />
+          <input
+            name="phone"
+            placeholder="Phone"
+            value={form.phone}
+            onChange={handleChange}
+            style={{ width: "100%", padding: 8 }}
+          />
+          <input
+            name="status"
+            placeholder="Status"
+            value={form.status}
+            onChange={handleChange}
+            style={{ width: "100%", padding: 8 }}
+          />
+          <input
+            name="role"
+            placeholder="Role"
+            value={form.role}
+            onChange={handleChange}
+            style={{ width: "100%", padding: 8 }}
+          />
 
-          <button onClick={create} style={{ padding: 10 }}>Create User</button>
+          <button onClick={create} style={{ padding: 10 }}>
+            Create User
+          </button>
         </div>
+
+        {/* ✅ FILTER INPUT (NEW) */}
+        <input
+          type="text"
+          placeholder="Search users (name, email, phone, status, role)..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          style={{ width: "100%", padding: 10, marginBottom: 12 }}
+        />
 
         <table width="100%" border={1} cellPadding={6} style={{ textAlign: "center" }}>
           <thead>
@@ -107,7 +155,8 @@ export default function UsersPage({ users, setUsers }: Props) {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
+            {/* ✅ Use filteredUsers instead of users */}
+            {filteredUsers.map((u) => (
               <tr key={u.id}>
                 <td>{u.id}</td>
                 <td>{u.name}</td>
@@ -121,9 +170,21 @@ export default function UsersPage({ users, setUsers }: Props) {
                 </td>
               </tr>
             ))}
+
+            {/* ✅ Show correct empty message depending on filter */}
             {users.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ padding: 16 }}>No users yet</td>
+                <td colSpan={7} style={{ padding: 16 }}>
+                  No users yet
+                </td>
+              </tr>
+            )}
+
+            {users.length > 0 && filteredUsers.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ padding: 16 }}>
+                  No users match your search
+                </td>
               </tr>
             )}
           </tbody>
